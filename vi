@@ -1,40 +1,72 @@
-#!/bin/bash   
+#!/bin/bash
 # vim-switch - switch to existing vim instance in screen session
 # (c) 2013-2015 Luc Deschenaux
 # LICENSE: GPLv3 - http://www.gnu.org/licenses/gpl-3.0.txt
 
-# TODO: switch between terminal windows / screen sessions         
+# TODO: switch between terminal windows / screen sessions
 # TODO: use getopts in getfilename() and pass options to vim
 
-VIM=$(which vim)  
+VIM=$(which vim)
 
-getfilename() {   
+MYSHELL_PPID=$(ps -o ppid= $PPID)
+
+# allow to display selection menu from vim
+if [ "$(ps -o cmd= $PPID | cut -f 1 -d ' ')" = "$VIM" ] ; then
+    INVIM=true
+    MYSHELL_PPID=$(ps -o ppid= $MYSHELL_PPID)
+fi
+
+main() {
+
+    WD=$PWD
+
+    # no parameters, open vim instance selection dialog if any
+    [ $# -eq 0 ] && selectExistingVimInstance
+
+    # switch to existing vim instance if possible
+    getfilename $@ && switchToExistingVimInstance $@
+    [ -f "$TMPLIST" ] && rm $TMPLIST
+
+    # exit if called from vim
+    [ -n "$INVIM" ] && exit 0
+
+    # else run vim normally, if not called from vim
+    cd $WD
+    exec $VIM $@
+}
+
+getVimInstances() {
+    # get pid ppid pts and filename list for vim instances
+    TMPLIST=$(mktemp -u)
+    ps -Af |
+    grep $VIM |
+    awk '{printf("%s %s %s",$2,$3,$6);for(i=8;i<=NF;++i)printf(" %s",$i);printf("%c","\n")}' > $TMPLIST
+}
+
+getfilename() {
 # strip options from arguments and return the real path in FILEPATH variable
 # return an error when many filenames are specified or file does not exists
 
-    while [ $# -gt 0 ] ; do                
-        if [ "${1:0:1}" != '-' ] ; then    
-            # error when many filenames are specified             
+    while [ $# -gt 0 ] ; do
+        if [ "${1:0:1}" != '-' ] ; then
+            # error when many filenames are specified
             [ -n "$FILENAME" ] && return 1
             FILENAME="$1"
-        fi    
-        shift 
-    done      
+        fi
+        shift
+    done
 
     # run vim normally when file does not exists
     [ -f "$FILENAME" ] || return 1
 
     FILEPATH=$(realpath "$FILENAME")
 
-}             
+}
 
-getfilename $@ && {
- 
-    # get pid ppid pts and filename list for vim instances 
-    TMPLIST=$(mktemp -u)
-    ps -Af |      
-    grep $VIM |
-    awk '{printf("%s %s %s",$2,$3,$6);for(i=8;i<=NF;++i)printf(" %s",$i);printf("%c","\n")}' > $TMPLIST
+switchToExistingVimInstance() {
+
+    # get pid ppid pts and filename list for vim instances
+    [ -f "$TMPLIST" ] || getVimInstances
 
     # search an existing vim instance for FILEPATH
     while read PID_PPID_PTS_RELPATH ; do
@@ -48,7 +80,7 @@ getfilename $@ && {
 
         # skip when basename not in parameters
         echo "$@" | grep -q $(basename $VIM_RELPATH) || continue
- 
+
         # skip when cannot change to vim directory
         cd /proc/$VIM_PID/cwd || continue
 
@@ -62,7 +94,6 @@ getfilename $@ && {
 
         # check whether the vim parent shell match this script parent shell
         VIMSHELL_PPID=$(ps -o ppid= $VIM_PPID)
-        MYSHELL_PPID=$(ps -o ppid= $PPID)
         if [ "$MYSHELL_PPID" = "$VIMSHELL_PPID" ] ; then
 
             # switch to existing vim session window
@@ -70,13 +101,40 @@ getfilename $@ && {
 
             # optionally kill this script parent shell
             [ -n "$KILL" ] && kill $PPID
-            exit  
+            exit
 
-        fi    
+        fi
 
     done < $TMPLIST
- 
-}             
- 
-# else run vim normally
-exec $VIM $@  
+
+    return 1
+}
+
+selectExistingVimInstance() {
+    getVimInstances
+
+    FILE_LIST=()
+    # get vim instance list sharing this script PPID
+    while read PID_PPID_PTS_RELPATH ; do
+        ARRAY=($PID_PPID_PTS_RELPATH)
+        VIM_PID=${ARRAY[0]}
+        VIM_PPID=${ARRAY[1]}
+
+        # check whether the vim parent shell match this script parent shell
+        VIMSHELL_PPID=$(ps -o ppid= $VIM_PPID)
+        [ "$VIMSHELL_PPID" = "$MYSHELL_PPID" ] &&
+        # and whether we can change to vim directory
+        cd /proc/$VIM_PID/cwd &&
+        VIM_RELPATH=${ARRAY[@]:4} &&
+        FILE_LIST+=("$(realpath $VIM_RELPATH)")
+
+    done < $TMPLIST
+
+    FILEPATH=$(zenity --list --width 640 --height 512 --column "File" ${FILE_LIST[*]} 2> /dev/null)
+
+    if [ -n "$FILEPATH" ] ; then
+        switchToExistingVimInstance "$FILEPATH"
+    fi
+}
+
+main $@
