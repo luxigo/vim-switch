@@ -10,7 +10,7 @@ VIM=$(which vim)
 [ "$TERM" = "screen" ] || exec $VIM $@
 
 # uncomment to kill the calling shell
-KILL=-9
+#KILL=-9
 
 # detect whether this script is run from vim
 if [ "$(ps -o cmd= $PPID | cut -f 1 -d ' ')" = "$VIM" ] ; then
