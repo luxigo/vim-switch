@@ -61,8 +61,8 @@ getfilename $@ && {
         _WINDOW=$(tr '\0' '\n' < /proc/$VIM_PPID/environ | grep ^WINDOW= | cut -f 2 -d '=')
 
         # check whether the vim parent shell match this script parent shell
-        VIMSHELL_PPID=$(ps -Af | awk '/^[^ ]+ +'$VIM_PPID' +/{print $3}')
-        MYSHELL_PPID=$(ps -Af | awk '/^[^ ]+ +'$PPID' +/{print $3}')
+        VIMSHELL_PPID=$(ps -o ppid= $VIM_PPID)
+        MYSHELL_PPID=$(ps -o ppid= $PPID)
         if [ "$MYSHELL_PPID" = "$VIMSHELL_PPID" ] ; then
 
             # switch to existing vim session window
