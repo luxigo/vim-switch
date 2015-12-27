@@ -19,7 +19,7 @@ fi
 
 main() {
 
-    MYSHELL_SCREEN=$(ps -o ppid= $PPID)
+    MYSHELL_SCREEN=$(screenpid $PPID)
     WD=$PWD
 
     # no parameters, open vim instance selection dialog if any
@@ -116,9 +116,7 @@ switchToExistingVimInstance() {
             _WINDOW=$(tr '\0' '\n' < /proc/$VIM_PPID/environ | grep ^WINDOW= | cut -f 2 -d '=')
 
             # switch to existing vim session window
-echo select $KILL $PPID
             screen -X select $_WINDOW
-echo KILL
 
             # optionally kill this script parent shell
             [ -n "$KILL" ] && kill $KILL $PPID
