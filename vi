@@ -145,7 +145,7 @@ selectExistingVimInstance() {
         VIM_SCREEN=$(screenpid $VIM_PPID) &&
         [ "$VIM_SCREEN" = "$MYSHELL_SCREEN" ] &&
         # and whether we can change to vim directory
-        [ -f /proc/$VIM_PID/cwd ] &&
+        [ -d /proc/$VIM_PID/cwd/ ] &&
         cd /proc/$VIM_PID/cwd &&
         VIM_RELPATH=${ARRAY[@]:4} &&
         FILE_LIST+=("$(realpath $VIM_RELPATH)")
