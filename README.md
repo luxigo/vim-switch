@@ -14,10 +14,10 @@ switch to an existing vim instance
 
   Three scenarios:
   
-1. If you have already open a file in a screen session, using the 'vi' command to open it again will switch to the virtual terminal window.
+1. If you are already editing a file in a screen session, using the 'vi' command to open the same file again will switch to the virtual terminal window.
 
-2. In a screen session, running 'vi' without arguments will display the list of existing vim sessions from which you can select the one you want to switch to.
+2. In a screen session, running 'vi' without arguments will display the list of existing vim instances from which you can select the one you want to switch to.
 
-3. From within the vim editor (running in a screen session), press <shift>-<V> to display the list of existing vim sessions, from which you can select the one you want to switch to.
+3. From within the vim editor (running in a screen session), press <shift>-<V> to display the list of existing vim instances, from which you can select the one you want to switch to.
   
   
