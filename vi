@@ -7,17 +7,19 @@
 # TODO: use getopts in getfilename() and pass options to vim
 
 VIM=$(which vim)
+[ "$TERM" = "screen" ] || exec $VIM $@
 
-MYSHELL_PPID=$(ps -o ppid= $PPID)
+# uncomment to kill the calling shell
+KILL=-9
 
-# allow to display selection menu from vim
+# detect whether this script is run from vim
 if [ "$(ps -o cmd= $PPID | cut -f 1 -d ' ')" = "$VIM" ] ; then
     INVIM=true
-    MYSHELL_PPID=$(ps -o ppid= $MYSHELL_PPID)
 fi
 
 main() {
 
+    MYSHELL_SCREEN=$(ps -o ppid= $PPID)
     WD=$PWD
 
     # no parameters, open vim instance selection dialog if any
@@ -33,6 +35,21 @@ main() {
     # else run vim normally, if not called from vim
     cd $WD
     exec $VIM $@
+}
+
+
+screenpid() {
+
+  shopt -s nocasematch
+
+  _PID=$1
+
+  while ! [[ $(ps -o cmd= $_PID) =~ ^SCREEN ]] ; do
+    _PID=$(ps -o ppid= $_PID) || return 1
+  done
+
+  echo $_PID
+
 }
 
 getVimInstances() {
@@ -78,6 +95,8 @@ switchToExistingVimInstance() {
         VIM_PTS=${ARRAY[2]}
         VIM_RELPATH=${ARRAY[@]:4}
 
+        [ -z "$VIM_RELPATH" ] && continue
+
         # skip when basename not in parameters
         echo "$@" | grep -q $(basename $VIM_RELPATH) || continue
 
@@ -89,18 +108,20 @@ switchToExistingVimInstance() {
 
         [ "$VIM_FILEPATH" = "$FILEPATH" ] || continue
 
-        # get the screen window number for vim parent shell
-        _WINDOW=$(tr '\0' '\n' < /proc/$VIM_PPID/environ | grep ^WINDOW= | cut -f 2 -d '=')
+        # check whether the vim parent screen match this script parent screen
+        VIM_SCREEN=$(screenpid $VIM_PPID) || continue
+        if [ "$MYSHELL_SCREEN" = "$VIM_SCREEN" ] ; then
 
-        # check whether the vim parent shell match this script parent shell
-        VIMSHELL_PPID=$(ps -o ppid= $VIM_PPID)
-        if [ "$MYSHELL_PPID" = "$VIMSHELL_PPID" ] ; then
+            # get the screen window number for vim parent shell
+            _WINDOW=$(tr '\0' '\n' < /proc/$VIM_PPID/environ | grep ^WINDOW= | cut -f 2 -d '=')
 
             # switch to existing vim session window
+echo select $KILL $PPID
             screen -X select $_WINDOW
+echo KILL
 
             # optionally kill this script parent shell
-            [ -n "$KILL" ] && kill $PPID
+            [ -n "$KILL" ] && kill $KILL $PPID
             exit
 
         fi
@@ -120,22 +141,23 @@ selectExistingVimInstance() {
         VIM_PID=${ARRAY[0]}
         VIM_PPID=${ARRAY[1]}
 
-        # check whether the vim parent shell match this script parent shell
-        VIMSHELL_PPID=$(ps -o ppid= $VIM_PPID)
-        [ "$VIMSHELL_PPID" = "$MYSHELL_PPID" ] &&
+        # check whether the vim parent screen match this script parent screen
+        VIM_SCREEN=$(screenpid $VIM_PPID) &&
+        [ "$VIM_SCREEN" = "$MYSHELL_SCREEN" ] &&
         # and whether we can change to vim directory
+        [ -f /proc/$VIM_PID/cwd ] &&
         cd /proc/$VIM_PID/cwd &&
         VIM_RELPATH=${ARRAY[@]:4} &&
         FILE_LIST+=("$(realpath $VIM_RELPATH)")
 
     done < $TMPLIST
 
-    [ ${#FILE_LIST[*]} -eq 0 ] && return
-
-    FILEPATH=$(zenity --list --width 640 --height 512 --column "File" ${FILE_LIST[*]} 2> /dev/null)
-
-    if [ -n "$FILEPATH" ] ; then
-        switchToExistingVimInstance "$FILEPATH"
+    # show dialog
+    if [ ${#FILE_LIST[*]} -ne 0 ] ; then
+      FILEPATH=$(zenity --list --width 640 --height 512 --column "File" ${FILE_LIST[*]} 2> /dev/null)
+      if [ -n "$FILEPATH" ] ; then
+          switchToExistingVimInstance "$FILEPATH"
+      fi
     fi
 }
 
