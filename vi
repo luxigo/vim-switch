@@ -130,6 +130,8 @@ selectExistingVimInstance() {
 
     done < $TMPLIST
 
+    [ ${#FILE_LIST[*]} -eq 0 ] && return
+
     FILEPATH=$(zenity --list --width 640 --height 512 --column "File" ${FILE_LIST[*]} 2> /dev/null)
 
     if [ -n "$FILEPATH" ] ; then
