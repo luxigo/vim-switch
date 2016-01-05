@@ -1,5 +1,8 @@
 # vim-switch
-switch to an existing vim instance
+* open vim instances in the specified screen session
+* open the (optional) terminal window and bring it to front
+* switch to existing vim instance in the specified screen session
+* when run from vim (with :!vi or shift-V) display the list of opened files
 
 ## Requirements
   sudo apt-get install vim screen realpath zenity
@@ -13,27 +16,15 @@ switch to an existing vim instance
 
 ## Usage
 
-  Three scenarios:
+```vi <filename>```
 
-1. If you are already editing a file in a screen session, using the 'vi' command to open the same file again will switch to the virtual terminal window.
+###### NOTE: command line options, multiple files and spaces in filenames are not supported yet... (use the "vim" command instead for the real thing)
 
-2. In a screen session, running 'vi' without arguments will display the list of existing vim instances from which you can select the one you want to switch to.
+1. Using the vi command, files will be open in the specified screen session (that will be created automatically), in the (optional) terminal application specified.
 
-3. From within the vim editor (running in a screen session), press <shift>-<V> to display the list of existing vim instances, from which you can select the one you want to switch to.
+2. If you are already editing a file in the specified screen session, using the 'vi' command to open the same file again will switch to the virtual terminal window (and bring the X terminal window to the front)
 
+3. In a screen session, running 'vi' without arguments will display the list of existing vim instances from which you can select the one you want to switch to.
 
-## Bonus
+4. From within the vim editor (running in a screen session), press <shift>-<V> to display the list of existing vim instances, from which you can select the one you want to switch to.
 
-Use the command viall (that share the same syntax as the 'find' command') to open a set of files with vim in a screen session, one tab per file, eg:
-
-```viall /src/myproject -name \*.js```
-
-Type <Ctrl>-<"> to display the list of files and switch
-
-OR
-
-Type <Shift><V>
-
-OR
-
-Type :!vi
