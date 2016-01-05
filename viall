@@ -3,18 +3,5 @@
 # (c) 2015 Luc Deschenaux
 # LICENSE: GPLv3 - http://www.gnu.org/licenses/gpl-3.0.txt
 
-i=0 ;
-SCREENRC=$(mktemp)
-[ -f ~/.screenrc ] && cp ~/.screenrc $SCREENRC
-
-find $@ | sort | while read l ; do cat << EOF
-screen -t $l
-select $i
-stuff "vi $(realpath $l)^M"
-EOF
-  ((++i))
-done > $SCREENRC
-
-screen -c $SCREENRC
-rm $SCREENRC
+find $@ | sort -u | while read l ; do vi $l ; done
 

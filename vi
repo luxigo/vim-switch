@@ -1,23 +1,106 @@
 #!/bin/bash
-# vim-switch - switch to existing vim instance in screen session
+# vim-switch - switch to existing vim instance in the specified screen session
+#
+#  * open the (optional) terminal window and bring it to front
+#  * when run from vim (with :!vi or shift-V) display the list of opened files
+#
 # (c) 2013-2015 Luc Deschenaux
 # LICENSE: GPLv3 - http://www.gnu.org/licenses/gpl-3.0.txt
 
-# TODO: switch between terminal windows / screen sessions
-# TODO: use getopts in getfilename() and pass options to vim
+# TODO: update the WINDOWID file (.wid) after a screen -r
+# TODO: handle multiple terminal windows / screen sessions
+# TODO: use the current terminal window when no screen session is active
+# TODO: use getopts in getfilename(), handle multiple file names and forward options to vim
+
+# comment the line below if you dont want to open terminal windows
+# or set it to your favourite terminal command
+TERMINAL=gnome-terminal
+#TERMINAL=xterm
 
 VIM=$(which vim)
-[ "$TERM" = "screen" ] || exec $VIM $@
 
-# uncomment to kill the calling shell
-#KILL=-9
+# the default screen session is named vim
+[ -z "$SCREEN_SESSION" ] && SCREEN_SESSION=vim
 
 # detect whether this script is run from vim
-if [ "$(ps -o cmd= $PPID | cut -f 1 -d ' ')" = "$VIM" ] ; then
-    INVIM=true
+if [ "$(ps -o cmd= $PPID 2>/dev/null | cut -f 1 -d ' ')" = "$VIM" ] ; then
+    FROMVIM=true
 fi
 
 main() {
+
+  # when a X terminal is defined, run vim_fromX; but not from vim or from the target screen session.
+  if [ -n "$TERMINAL" ] && [ -z "$FROMVIM" ] && [ -n "$DISPLAY" ] && [ "$(echo $STY | cut -f 2 -d '.')" != "$SCREEN_SESSION" ] ; then
+    vim_fromX $@
+
+  else
+    vim_fromTerm $@
+
+  fi
+}
+
+vim_fromX() {
+
+  # get the pid for the target screen session
+  SCREEN_PID=$(screen -ls 2>/dev/null | grep -E -e '[0-9]+\.'$SCREEN_SESSION | awk -F . '{print $1}' | xargs)
+
+  # get the FILEPATH
+  getfilename $@
+
+  # create the screen session if not already exists
+  if [ -z "$SCREEN_PID" ] ; then
+
+    # we need to get the terminal WINDOWID
+    WID_FILE=$(mktemp -u)
+
+    # change to the file directory
+    cd $(dirname $FILEPATH)
+
+    # open a terminal window for the new screen session
+    $TERMINAL -e "screen -S $SCREEN_SESSION -t '' bash" &
+
+    while [ -z "$SCREEN_PID" ] ; do
+      # get the screen session PID
+      SCREEN_PID=$(screen -ls | grep -E -e '[0-9]+\.'$SCREEN_SESSION | awk -F . '{print $1}' | xargs)
+      sleep 0.2
+    done
+
+    # get the X terminal WINDOWID
+    screen -S $SCREEN_SESSION -X stuff "echo \$WINDOWID > $WID_FILE && clear\n"
+
+    # wait for the X terminal WINDOWID
+    while [ ! -f $WID_FILE ] ; do sleep 0.2 ; done
+
+    # rename the temporary WINDOWID file
+    mv $WID_FILE /tmp/${SCREEN_PID}.wid
+
+  fi
+
+  # get the WINDOWID for the SCREEN_SESSION
+  WID=$(cat /tmp/${SCREEN_PID}.wid)
+
+  # open the specified file with a recursive call
+  screen -S $SCREEN_SESSION -X screen -t '' vi $FILEPATH
+
+  # bring the terminal window to front
+  [ -n "$WID" ] && wmctrl -i -a $WID 2>/dev/null && exit
+
+  # if the window does not exists, open a new terminal and reattach 
+  # TODO: find a way to update the WINDOWID without opening a new terminal, when possible.
+  TMPSCRIPT=$(mktemp -u)
+  cat > $TMPSCRIPT << EOF
+
+#!/bin/bash
+echo \$WINDOWID > /tmp/${SCREEN_PID}.wid
+rm $TMPSCRIPT
+screen -rd $SCREEN_SESSION
+EOF
+
+  chmod +x $TMPSCRIPT
+  $TERMINAL -e $TMPSCRIPT &
+}
+
+vim_fromTerm() {
 
     MYSHELL_SCREEN=$(screenpid $PPID)
     WD=$PWD
@@ -30,13 +113,12 @@ main() {
     [ -f "$TMPLIST" ] && rm $TMPLIST
 
     # exit if called from vim
-    [ -n "$INVIM" ] && exit 0
+    [ -n "$FROMVIM" ] && exit 0
 
     # else run vim normally, if not called from vim
     cd $WD
     exec $VIM $@
 }
-
 
 screenpid() {
 
@@ -44,8 +126,8 @@ screenpid() {
 
   _PID=$1
 
-  while ! [[ $(ps -o cmd= $_PID) =~ ^SCREEN ]] ; do
-    _PID=$(ps -o ppid= $_PID) || return 1
+  while ! [[ $(ps -o cmd= $_PID 2>/dev/null) =~ ^SCREEN ]] ; do
+    _PID=$(ps -o ppid= $_PID 2>/dev/null) || return 1
   done
 
   echo $_PID
@@ -73,11 +155,7 @@ getfilename() {
         shift
     done
 
-    # run vim normally when file does not exists
-    [ -f "$FILENAME" ] || return 1
-
     FILEPATH=$(realpath "$FILENAME")
-
 }
 
 switchToExistingVimInstance() {
@@ -113,7 +191,7 @@ switchToExistingVimInstance() {
         if [ "$MYSHELL_SCREEN" = "$VIM_SCREEN" ] ; then
 
             # get the screen window number for vim parent shell
-            _WINDOW=$(tr '\0' '\n' < /proc/$VIM_PPID/environ | grep ^WINDOW= | cut -f 2 -d '=')
+            _WINDOW=$(tr '\0' '\n' < /proc/$VIM_PID/environ | grep ^WINDOW= | cut -f 2 -d '=')
 
             # switch to existing vim session window
             screen -X select $_WINDOW
@@ -160,3 +238,4 @@ selectExistingVimInstance() {
 }
 
 main $@
+
