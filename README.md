@@ -20,11 +20,11 @@
 
 ###### NOTE: command line options, multiple files and spaces in filenames are not supported yet... (use the "vim" command instead for the real thing)
 
-1. Using the vi command, files will be open in the specified screen session (that will be created automatically), in the (optional) terminal application specified.
+* Using the vi command, files will be open in the specified screen session (that will be created automatically), in the (optional) terminal application specified.
 
-2. If you are already editing a file in the specified screen session, using the 'vi' command to open the same file again will switch to the virtual terminal window (and bring the X terminal window to the front)
+* If you are already editing a file in the specified screen session, using the 'vi' command to open the same file again will switch to the virtual terminal window (and bring the X terminal window to the front)
 
-3. In a screen session, running 'vi' without arguments will display the list of existing vim instances from which you can select the one you want to switch to.
+* In a screen session, running 'vi' without arguments will display the list of existing vim instances from which you can select the one you want to switch to.
 
-4. From within the vim editor (running in a screen session), press <shift>-<V> to display the list of existing vim instances, from which you can select the one you want to switch to.
+* From within the vim editor (running in a screen session), press <shift>-<V> to display the list of existing vim instances, from which you can select the one you want to switch to.
 
