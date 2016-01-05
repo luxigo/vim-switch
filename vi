@@ -61,17 +61,23 @@ vim_fromX() {
     # open a terminal window for the new screen session
     $TERMINAL -e "screen -S $SCREEN_SESSION -t '' bash" &
 
+    count=0
     while [ -z "$SCREEN_PID" ] ; do
       # get the screen session PID
       SCREEN_PID=$(screen -ls | grep -E -e '[0-9]+\.'$SCREEN_SESSION | awk -F . '{print $1}' | xargs)
-      sleep 0.2
+      sleep 0.1
+      (( ++count > 1000 )) && exit 1
     done
 
     # get the X terminal WINDOWID
     screen -S $SCREEN_SESSION -X stuff "echo \$WINDOWID > $WID_FILE && clear\n"
 
+    count=0
     # wait for the X terminal WINDOWID
-    while [ ! -f $WID_FILE ] ; do sleep 0.2 ; done
+    while [ ! -f $WID_FILE ] ; do
+      sleep 0.1 
+      (( ++count > 1000 )) && exit 1
+    done
 
     # rename the temporary WINDOWID file
     mv $WID_FILE /tmp/${SCREEN_PID}.wid
@@ -181,7 +187,7 @@ switchToExistingVimInstance() {
         echo "$@" | grep -q $(basename $VIM_RELPATH) || continue
 
         # skip when cannot change to vim directory
-        cd /proc/$VIM_PID/cwd || continue
+        cd /proc/$VIM_PID/cwd 2> /dev/null || continue
 
         # get real file path
         VIM_FILEPATH=$(realpath $VIM_RELPATH)
