@@ -1,7 +1,9 @@
 #!/bin/bash
-# vim-switch - switch to existing vim instance in the specified screen session
-#
+# vim-switch
+
+#  * open vim instances in the specified screen session
 #  * open the (optional) terminal window and bring it to front
+#  * switch to existing vim instance in the specified screen session
 #  * when run from vim (with :!vi or shift-V) display the list of opened files
 #
 # (c) 2013-2015 Luc Deschenaux
