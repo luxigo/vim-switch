@@ -88,7 +88,7 @@ vim_fromX() {
   WID=$(cat /tmp/${SCREEN_PID}.wid)
 
   # open the specified file with a recursive call
-  screen -S $SCREEN_SESSION -X screen -t '' vi $FILEPATH
+  screen -S $SCREEN_SESSION -X screen -t '' vi $ARGLIST $FILEPATH
 
   # bring the terminal window to front
   [ -n "$WID" ] && wmctrl -i -a $WID 2>/dev/null && exit
@@ -125,7 +125,7 @@ vim_fromTerm() {
 
     # else run vim normally, if not called from vim
     cd $WD
-    exec $VIM $@
+    exec $VIM $ARGLIST $FILEPATH
 }
 
 screenpid() {
@@ -155,10 +155,13 @@ getfilename() {
 # return an error when many filenames are specified or file does not exists
 
     while [ $# -gt 0 ] ; do
-        if [ "${1:0:1}" != '-' ] ; then
+        CHAR="${1:0:1}"
+        if [ "$CHAR" != '-' -a "$CHAR" != "+" ] ; then
             # error when many filenames are specified
             [ -n "$FILENAME" ] && return 1
             FILENAME="$1"
+        else
+          ARGLIST="$ARGLIST $1" 
         fi
         shift
     done
@@ -182,9 +185,6 @@ switchToExistingVimInstance() {
         VIM_RELPATH=${ARRAY[@]:4}
 
         [ -z "$VIM_RELPATH" ] && continue
-
-        # skip when basename not in parameters
-        echo "$@" | grep -q $(basename $VIM_RELPATH) || continue
 
         # skip when cannot change to vim directory
         cd /proc/$VIM_PID/cwd 2> /dev/null || continue
