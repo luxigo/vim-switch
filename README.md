@@ -16,9 +16,9 @@
 
 ## Usage
 
-```vi <filename>```
+```vi [<option> ... ] <filename>```
 
-###### NOTE: command line options, multiple files and spaces in filenames are not supported yet... (use the "vim" command instead for the real thing)
+###### NOTE: command line options with spaces between switch and parameter, multiple files and spaces in filenames are not supported yet... (use the "vim" command instead for the real thing)
 
 * Using the vi command, files will be open in the specified screen session (that will be created automatically), in the (optional) terminal application specified.
 
