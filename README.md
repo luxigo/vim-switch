@@ -16,7 +16,7 @@
 
 ## Usage
 
-```vi [<option> ... ] <filename>```
+```vi [ <option> ... ] <filename>```
 
 ###### NOTE: command line options with spaces between switch and parameter, multiple files and spaces in filenames are not supported yet... (use the "vim" command instead for the real thing)
 
