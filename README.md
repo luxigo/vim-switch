@@ -18,7 +18,7 @@
 
 ```vi [ <option> ... ] <filename>```
 
-Or through https://github.com/luxigo/open-vim
+Or with atom-editor through https://github.com/luxigo/open-vim
 
 ###### NOTE: command line options with spaces between switch and parameter, multiple files and spaces in filenames are not supported yet... (use the "vim" command instead for the real thing)
 
