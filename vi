@@ -47,7 +47,7 @@ vim_fromX() {
   SCREEN_PID=$(screen -ls 2>/dev/null | grep -E -e '[0-9]+\.'$SCREEN_SESSION | awk -F . '{print $1}' | xargs)
 
   # get the FILEPATH
-  getfilename $@
+  FILEPATH=$(getfilename $@)
 
   # create the screen session if not already exists
   if [ -z "$SCREEN_PID" ] ; then
@@ -117,7 +117,7 @@ vim_fromTerm() {
     [ $# -eq 0 ] && selectExistingVimInstance
 
     # switch to existing vim instance if possible
-    getfilename $@ && switchToExistingVimInstance $@
+    FILEPATH=$(getfilename $@) && _ARGLIST=$ARGLIST && switchToExistingVimInstance $@
     [ -f "$TMPLIST" ] && rm $TMPLIST
 
     # exit if called from vim
@@ -125,7 +125,7 @@ vim_fromTerm() {
 
     # else run vim normally, if not called from vim
     cd $WD
-    exec $VIM $ARGLIST $FILEPATH
+    exec $VIM $_ARGLIST $FILEPATH
 }
 
 screenpid() {
@@ -166,7 +166,7 @@ getfilename() {
         shift
     done
 
-    FILEPATH=$(realpath "$FILENAME")
+    realpath "$FILENAME"
 }
 
 switchToExistingVimInstance() {
@@ -182,16 +182,13 @@ switchToExistingVimInstance() {
         VIM_PID=${ARRAY[0]}
         VIM_PPID=${ARRAY[1]}
         VIM_PTS=${ARRAY[2]}
-        VIM_RELPATH=${ARRAY[@]:4}
-
-        [ -z "$VIM_RELPATH" ] && continue
+        VIM_ARGS=${ARRAY[@]:4}
 
         # skip when cannot change to vim directory
         cd /proc/$VIM_PID/cwd 2> /dev/null || continue
 
-        # get real file path
-        VIM_FILEPATH=$(realpath $VIM_RELPATH)
-
+        # get the realpath of the opened file
+        VIM_FILEPATH=$(getfilename $VIM_ARGS)
         [ "$VIM_FILEPATH" = "$FILEPATH" ] || continue
 
         # check whether the vim parent screen match this script parent screen
@@ -231,8 +228,8 @@ selectExistingVimInstance() {
         # and whether we can change to vim directory
         [ -d /proc/$VIM_PID/cwd/ ] &&
         cd /proc/$VIM_PID/cwd &&
-        VIM_RELPATH=${ARRAY[@]:4} &&
-        FILE_LIST+=("$(realpath $VIM_RELPATH)")
+        VIM_ARGS=${ARRAY[@]:4} &&
+        FILE_LIST+=("$(getfilename $VIM_ARGS)")
 
     done < $TMPLIST
 
